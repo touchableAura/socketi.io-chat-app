@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    <title>Late Night Chat Server</title>
+    <style>
+
+        body {background-color: rgb(21, 21, 21);
+            font-family:Verdana, Geneva, Tahoma, sans-serif; }
+
+        .top{
+            background-color: rgb(21, 21, 21);
+            text-align: center;
+            margin: auto;
+            width: 40%;
+        }
+        .container {
+            background-color: rgb(21, 21, 21);
+            margin: auto;
+            width: 65%;
+            max-height: calc(100vh - 150px);
+            overflow: auto;
+            border: 5px solid rgb(48, 48, 48);
+            padding: 10px;
+            box-sizing: border-box;
+            padding: 20px;
+        }
+
+        .container.no-scroll {
+            overflow: hidden;
+            
+        }
+
+        .chatDisplay
+        {
+            overflow: auto;
+            box-sizing: border-box;
+    
+        }
+
+        .chatDisplay.no-scroll {
+            overflow: hidden;
+        }
+        #chatDisplay p {
+            font-size: 25px;
+            background-color: rgb(21, 21, 21);
+        }
+
+        .bottom-panel, .bottom-panel input {
+            font-size: 25px;
+        }
+
+        button {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 1.5rem;
+            background-color:rgb(21, 21, 21);
+            color: rgb(177, 65, 0);
+            border-color: rgb(177, 65, 0);
+        }
+
+        input 
+        {
+            background-color: rgb(21, 21, 21);
+            border-color: rgb(177, 65, 0);
+            width: 100%;
+            overflow:hidden;
+            color:rgb(148, 40, 0);
+        }
+
+        h1 
+        {
+            color: rgb(177, 65, 0);
+        }
+
+        p 
+        {
+            color: rgb(177, 65, 0);
+        }
+    </style>
+  <script src="https://cdn.socket.io/4.6.0/socket.io.min.js" integrity="sha384-c79GN5VsunZvi+Q/WObgk2in0CbZsHnjEqvFxC5DxHn9lTfNce2WW6h2pH6u/kF+" crossorigin="anonymous"></script>
+
+
+</head>
+<body>
+    <div class="top"><h1>late night chats</h1></div>
+    <div class="container" style="height: 500px;max-height: 500px;overflow-y: scroll;">
+        
+        <div id="chatDisplay" class="no-scroll"></div>
+    </div>
+    <div class="container bottom-panel">
+        <p>Your Name: <input type="text" id="name" /></p>
+        <p>Your Message: <input type="text" id="message" style="width: 100%" /></p>
+        <button id='connectButton'>Connect</button>
+        <button id='disconnectButton'>Disconnect</button>
+        <button id='sendButton'>Send Message</button>
+        <p>Online Users: <span id="userDisplay"></span></p>
+        <p>Current Server Time: <span id="timeDisplay"></span></p>
+    </div>
+    <script>
+        function UIStatus(status) {
+            if (status) {
+            connectButton.disabled = false;
+            disconnectButton.disabled = true;
+            nameTextbox.disabled = true;
+            messageTextbox.disabled = true;
+            sendButton.disabled = true;} else
+            {
+            connectButton.disabled = true;
+            disconnectButton.disabled = false;
+            nameTextbox.disabled = false;
+            messageTextbox.disabled = false;
+            sendButton.disabled = false;
+
+            }
+        }
+
+        const connectButton = document.querySelector('#connectButton')
+        const disconnectButton = document.querySelector('#disconnectButton')
+        
+        const chatDisplay = document.querySelector('#chatDisplay');
+        const nameTextbox = document.querySelector('#name');
+        const messageTextbox = document.querySelector('#message');
+        const sendButton = document.querySelector('#sendButton');
+        const timeDisplay = document.querySelector('#timeDisplay');
+        const usersDisplay = document.querySelector('#userDisplay')
+        
+        UIStatus(true);
+    
+        connectButton.addEventListener('click', () => {
+        
+        UIStatus(false);
+
+        const socket = io();
+
+        // listen for the welcome event 
+        // io.on('connection', socket=>{
+        // socket.emit('welcome', `Welcome to the chat server!`);
+
+        socket.on('welcome', message=>{
+            console.log(message);
+            const myP = document.createElement('p');
+            myP.innerText = message;
+            chatDisplay.appendChild(myP);
+        })
+        
+
+        // send the message and username info to the server,
+        // name and msg must contain input to work
+        sendButton.addEventListener('click', ()=>{
+            const name = nameTextbox.value;
+            const message = messageTextbox.value;
+
+            if (name === "" || message==="") {
+                alert("name and message inputs must contain input")
+            }
+            else {
+                const data = { name: name, message: message}
+                socket.emit('message', data);
+                messageTextbox.value = "";
+            }
+
+            
+        })
+        
+        disconnectButton.addEventListener('click', () => {
+            timeDisplay.innerText = "";
+            usersDisplay.innerText = "";
+            nameTextbox.value = "";
+            messageTextbox.value = "";
+            UIStatus(true);
+            socket.disconnect();
+            })
+        
+        // listen for socket.on('connect') to announce to chat new user has joined
+        socket.on('connect', () => {
+            // emitting to everybody
+            const message = {name: 'Server', message: 'a new user has joined the chat'}
+            socket.emit('message', message);
+        })
+
+         // listen for socket.on(disconnect) event, when you 'hear' it log a message
+        socket.on('disconnect',()=>{
+            console.log('server disconnected');
+            const message = {name: 'Sever', message: 'a user has left the chat'}
+        })
+
+        // listen for message event sent from io.emit
+        // create new 'p' element from the data sent from the server
+        socket.on('message', (message)=>{
+            const pTag = document.createElement('p');
+            pTag.innerText = message.name+": " + message.message;
+            chatDisplay.appendChild(pTag);
+        })
+
+         // listen for the time data sent from the server
+        socket.on('server-time', (x)=> {
+            timeDisplay.innerText = x;
+        })
+
+        // listen for server connections and update number of people in chat
+        socket.on("whenUserConnected", (x) => {
+           usersDisplay.innerText = x;
+           })
+
+    })
+
+    // scrollbar
+    // const container = document.querySelector('.container');
+    // if (container.scrollHeight <= container.clientHeight) 
+    // {
+    //     container.classList.add('no-scroll');
+    // } else {
+    //     container.classList('no-scroll');
+    // }
+
+    </script>
+</body>
+</html>
