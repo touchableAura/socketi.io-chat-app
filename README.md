@@ -9,3 +9,4 @@ this chat app is build with html, css, javascript and socket.io
 5) from here you can connect to the chat, enter your name and msg, and interact with the other connected users. 
 
 
+![chatapp](https://github.com/touchableAura/socketi.io-chat-app/assets/132860080/af4d9711-142f-4a66-9764-39d24b1121ab)
